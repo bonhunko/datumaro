@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>datumaro.plugins.data_formats.sly_pointcloud.exporter &#8212; Datumaro 1.2.0 documentation</title>
+    <title>datumaro.plugins.data_formats.sly_pointcloud.exporter &#8212; Datumaro 1.4.1 documentation</title>
   
   
   
@@ -294,9 +294,9 @@
 <span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
 
 <span class="kn">from</span> <span class="nn">datumaro.components.annotation</span> <span class="kn">import</span> <span class="n">AnnotationType</span><span class="p">,</span> <span class="n">LabelCategories</span>
-<span class="kn">from</span> <span class="nn">datumaro.components.dataset</span> <span class="kn">import</span> <span class="n">ItemStatus</span>
 <span class="kn">from</span> <span class="nn">datumaro.components.dataset_base</span> <span class="kn">import</span> <span class="n">DatasetItem</span><span class="p">,</span> <span class="n">IDataset</span>
-<span class="kn">from</span> <span class="nn">datumaro.components.errors</span> <span class="kn">import</span> <span class="n">MediaTypeError</span>
+<span class="kn">from</span> <span class="nn">datumaro.components.dataset_item_storage</span> <span class="kn">import</span> <span class="n">ItemStatus</span>
+<span class="kn">from</span> <span class="nn">datumaro.components.errors</span> <span class="kn">import</span> <span class="n">DatasetExportError</span><span class="p">,</span> <span class="n">MediaTypeError</span>
 <span class="kn">from</span> <span class="nn">datumaro.components.exporter</span> <span class="kn">import</span> <span class="n">Exporter</span>
 <span class="kn">from</span> <span class="nn">datumaro.components.media</span> <span class="kn">import</span> <span class="n">PointCloud</span>
 <span class="kn">from</span> <span class="nn">datumaro.util</span> <span class="kn">import</span> <span class="n">cast</span><span class="p">,</span> <span class="n">dump_json_file</span>
@@ -421,7 +421,7 @@
             <span class="k">if</span> <span class="n">tag</span><span class="p">[</span><span class="s2">&quot;value_type&quot;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="n">tag</span><span class="p">[</span><span class="s2">&quot;value_type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">value_type</span>
             <span class="k">elif</span> <span class="n">tag</span><span class="p">[</span><span class="s2">&quot;value_type&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="n">value_type</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span>
+                <span class="k">raise</span> <span class="n">DatasetExportError</span><span class="p">(</span>
                     <span class="s2">&quot;Item </span><span class="si">%s</span><span class="s2">: mismatching &quot;</span>
                     <span class="s2">&quot;value types for tag </span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2"> vs </span><span class="si">%s</span><span class="s2">&quot;</span>
                     <span class="o">%</span> <span class="p">(</span><span class="n">item</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">attr_name</span><span class="p">,</span> <span class="n">tag</span><span class="p">[</span><span class="s2">&quot;value_type&quot;</span><span class="p">],</span> <span class="n">value_type</span><span class="p">)</span>
@@ -507,7 +507,7 @@
                     <span class="k">if</span> <span class="n">tag</span><span class="p">[</span><span class="s2">&quot;value_type&quot;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                         <span class="n">tag</span><span class="p">[</span><span class="s2">&quot;value_type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">value_type</span>
                     <span class="k">elif</span> <span class="n">tag</span><span class="p">[</span><span class="s2">&quot;value_type&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="n">value_type</span><span class="p">:</span>
-                        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span>
+                        <span class="k">raise</span> <span class="n">DatasetExportError</span><span class="p">(</span>
                             <span class="s2">&quot;Item </span><span class="si">%s</span><span class="s2">: mismatching &quot;</span>
                             <span class="s2">&quot;value types for tag </span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2"> vs </span><span class="si">%s</span><span class="s2">&quot;</span>
                             <span class="o">%</span> <span class="p">(</span><span class="n">item</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">attr_name</span><span class="p">,</span> <span class="n">tag</span><span class="p">[</span><span class="s2">&quot;value_type&quot;</span><span class="p">],</span> <span class="n">value_type</span><span class="p">)</span>
@@ -651,11 +651,11 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_write_key_id</span><span class="p">()</span>
 
 
-<div class="viewcode-block" id="SuperviselyPointCloudExporter"><a class="viewcode-back" href="../../../../../docs/reference/plugins/data_formats/sly_pointcloud/datumaro.plugins.data_formats.sly_pointcloud.exporter.html#datumaro.plugins.data_formats.sly_pointcloud.exporter.SuperviselyPointCloudExporter">[docs]</a><span class="k">class</span> <span class="nc">SuperviselyPointCloudExporter</span><span class="p">(</span><span class="n">Exporter</span><span class="p">):</span>
+<div class="viewcode-block" id="SuperviselyPointCloudExporter"><a class="viewcode-back" href="../../../../../docs/reference/_autosummary/datumaro.plugins.data_formats.sly_pointcloud.exporter.html#datumaro.plugins.data_formats.sly_pointcloud.exporter.SuperviselyPointCloudExporter">[docs]</a><span class="k">class</span> <span class="nc">SuperviselyPointCloudExporter</span><span class="p">(</span><span class="n">Exporter</span><span class="p">):</span>
     <span class="n">NAME</span> <span class="o">=</span> <span class="s2">&quot;sly_pointcloud&quot;</span>
     <span class="n">DEFAULT_IMAGE_EXT</span> <span class="o">=</span> <span class="n">PointCloudPath</span><span class="o">.</span><span class="n">DEFAULT_IMAGE_EXT</span>
 
-<div class="viewcode-block" id="SuperviselyPointCloudExporter.build_cmdline_parser"><a class="viewcode-back" href="../../../../../docs/reference/plugins/data_formats/sly_pointcloud/datumaro.plugins.data_formats.sly_pointcloud.exporter.html#datumaro.plugins.data_formats.sly_pointcloud.exporter.SuperviselyPointCloudExporter.build_cmdline_parser">[docs]</a>    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="SuperviselyPointCloudExporter.build_cmdline_parser"><a class="viewcode-back" href="../../../../../docs/reference/_autosummary/datumaro.plugins.data_formats.sly_pointcloud.exporter.html#datumaro.plugins.data_formats.sly_pointcloud.exporter.SuperviselyPointCloudExporter.build_cmdline_parser">[docs]</a>    <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">build_cmdline_parser</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="n">parser</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">build_cmdline_parser</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
@@ -677,7 +677,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_reindex</span> <span class="o">=</span> <span class="n">reindex</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_allow_undeclared_attrs</span> <span class="o">=</span> <span class="n">allow_undeclared_attrs</span>
 
-<div class="viewcode-block" id="SuperviselyPointCloudExporter.apply"><a class="viewcode-back" href="../../../../../docs/reference/plugins/data_formats/sly_pointcloud/datumaro.plugins.data_formats.sly_pointcloud.exporter.html#datumaro.plugins.data_formats.sly_pointcloud.exporter.SuperviselyPointCloudExporter.apply">[docs]</a>    <span class="k">def</span> <span class="nf">apply</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_apply_impl</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extractor</span><span class="o">.</span><span class="n">media_type</span><span class="p">()</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extractor</span><span class="o">.</span><span class="n">media_type</span><span class="p">()</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">PointCloud</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">MediaTypeError</span><span class="p">(</span><span class="s2">&quot;Media type is not an image&quot;</span><span class="p">)</span>
 
@@ -687,9 +687,9 @@
                 <span class="s2">&quot;subset. Subset information will be ignored on export.&quot;</span>
             <span class="p">)</span>
 
-        <span class="n">_SuperviselyPointCloudDumper</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_extractor</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">dump</span><span class="p">()</span></div>
+        <span class="n">_SuperviselyPointCloudDumper</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_extractor</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">dump</span><span class="p">()</span>
 
-<div class="viewcode-block" id="SuperviselyPointCloudExporter.patch"><a class="viewcode-back" href="../../../../../docs/reference/plugins/data_formats/sly_pointcloud/datumaro.plugins.data_formats.sly_pointcloud.exporter.html#datumaro.plugins.data_formats.sly_pointcloud.exporter.SuperviselyPointCloudExporter.patch">[docs]</a>    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="SuperviselyPointCloudExporter.patch"><a class="viewcode-back" href="../../../../../docs/reference/_autosummary/datumaro.plugins.data_formats.sly_pointcloud.exporter.html#datumaro.plugins.data_formats.sly_pointcloud.exporter.SuperviselyPointCloudExporter.patch">[docs]</a>    <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">patch</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">patch</span><span class="p">,</span> <span class="n">save_dir</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="n">conv</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">patch</span><span class="o">.</span><span class="n">as_dataset</span><span class="p">(</span><span class="n">dataset</span><span class="p">),</span> <span class="n">save_dir</span><span class="o">=</span><span class="n">save_dir</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="n">conv</span><span class="o">.</span><span class="n">apply</span><span class="p">()</span>

@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>datumaro.plugins.data_formats.tf_detection_api.exporter &#8212; Datumaro 1.2.0 documentation</title>
+    <title>datumaro.plugins.data_formats.tf_detection_api.exporter &#8212; Datumaro 1.4.1 documentation</title>
   
   
   
@@ -290,7 +290,9 @@
 <span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">OrderedDict</span>
 
 <span class="kn">from</span> <span class="nn">datumaro.components.annotation</span> <span class="kn">import</span> <span class="n">AnnotationType</span><span class="p">,</span> <span class="n">LabelCategories</span>
+<span class="kn">from</span> <span class="nn">datumaro.components.errors</span> <span class="kn">import</span> <span class="n">DatasetExportError</span>
 <span class="kn">from</span> <span class="nn">datumaro.components.exporter</span> <span class="kn">import</span> <span class="n">Exporter</span>
+<span class="kn">from</span> <span class="nn">datumaro.components.lazy_plugin</span> <span class="kn">import</span> <span class="n">extra_deps</span>
 <span class="kn">from</span> <span class="nn">datumaro.components.media</span> <span class="kn">import</span> <span class="n">ByteImage</span><span class="p">,</span> <span class="n">Image</span><span class="p">,</span> <span class="n">ImageFromBytes</span>
 <span class="kn">from</span> <span class="nn">datumaro.util.annotation_util</span> <span class="kn">import</span> <span class="n">find_group_leader</span><span class="p">,</span> <span class="n">find_instances</span><span class="p">,</span> <span class="n">max_bbox</span>
 <span class="kn">from</span> <span class="nn">datumaro.util.image</span> <span class="kn">import</span> <span class="n">encode_image</span>
@@ -310,30 +312,31 @@
     <span class="k">return</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">_printable</span><span class="p">,</span> <span class="n">s</span><span class="p">))</span>
 
 
-<div class="viewcode-block" id="int64_feature"><a class="viewcode-back" href="../../../../../docs/reference/plugins/data_formats/tf_detection_api/datumaro.plugins.data_formats.tf_detection_api.exporter.html#datumaro.plugins.data_formats.tf_detection_api.exporter.int64_feature">[docs]</a><span class="k">def</span> <span class="nf">int64_feature</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+<div class="viewcode-block" id="int64_feature"><a class="viewcode-back" href="../../../../../docs/reference/_autosummary/datumaro.plugins.data_formats.tf_detection_api.exporter.html#datumaro.plugins.data_formats.tf_detection_api.exporter.int64_feature">[docs]</a><span class="k">def</span> <span class="nf">int64_feature</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">Feature</span><span class="p">(</span><span class="n">int64_list</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">Int64List</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="p">[</span><span class="n">value</span><span class="p">]))</span></div>
 
 
-<div class="viewcode-block" id="int64_list_feature"><a class="viewcode-back" href="../../../../../docs/reference/plugins/data_formats/tf_detection_api/datumaro.plugins.data_formats.tf_detection_api.exporter.html#datumaro.plugins.data_formats.tf_detection_api.exporter.int64_list_feature">[docs]</a><span class="k">def</span> <span class="nf">int64_list_feature</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+<div class="viewcode-block" id="int64_list_feature"><a class="viewcode-back" href="../../../../../docs/reference/_autosummary/datumaro.plugins.data_formats.tf_detection_api.exporter.html#datumaro.plugins.data_formats.tf_detection_api.exporter.int64_list_feature">[docs]</a><span class="k">def</span> <span class="nf">int64_list_feature</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">Feature</span><span class="p">(</span><span class="n">int64_list</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">Int64List</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="n">value</span><span class="p">))</span></div>
 
 
-<div class="viewcode-block" id="bytes_feature"><a class="viewcode-back" href="../../../../../docs/reference/plugins/data_formats/tf_detection_api/datumaro.plugins.data_formats.tf_detection_api.exporter.html#datumaro.plugins.data_formats.tf_detection_api.exporter.bytes_feature">[docs]</a><span class="k">def</span> <span class="nf">bytes_feature</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+<div class="viewcode-block" id="bytes_feature"><a class="viewcode-back" href="../../../../../docs/reference/_autosummary/datumaro.plugins.data_formats.tf_detection_api.exporter.html#datumaro.plugins.data_formats.tf_detection_api.exporter.bytes_feature">[docs]</a><span class="k">def</span> <span class="nf">bytes_feature</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">Feature</span><span class="p">(</span><span class="n">bytes_list</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">BytesList</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="p">[</span><span class="n">value</span><span class="p">]))</span></div>
 
 
-<div class="viewcode-block" id="bytes_list_feature"><a class="viewcode-back" href="../../../../../docs/reference/plugins/data_formats/tf_detection_api/datumaro.plugins.data_formats.tf_detection_api.exporter.html#datumaro.plugins.data_formats.tf_detection_api.exporter.bytes_list_feature">[docs]</a><span class="k">def</span> <span class="nf">bytes_list_feature</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+<div class="viewcode-block" id="bytes_list_feature"><a class="viewcode-back" href="../../../../../docs/reference/_autosummary/datumaro.plugins.data_formats.tf_detection_api.exporter.html#datumaro.plugins.data_formats.tf_detection_api.exporter.bytes_list_feature">[docs]</a><span class="k">def</span> <span class="nf">bytes_list_feature</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">Feature</span><span class="p">(</span><span class="n">bytes_list</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">BytesList</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="n">value</span><span class="p">))</span></div>
 
 
-<div class="viewcode-block" id="float_list_feature"><a class="viewcode-back" href="../../../../../docs/reference/plugins/data_formats/tf_detection_api/datumaro.plugins.data_formats.tf_detection_api.exporter.html#datumaro.plugins.data_formats.tf_detection_api.exporter.float_list_feature">[docs]</a><span class="k">def</span> <span class="nf">float_list_feature</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+<div class="viewcode-block" id="float_list_feature"><a class="viewcode-back" href="../../../../../docs/reference/_autosummary/datumaro.plugins.data_formats.tf_detection_api.exporter.html#datumaro.plugins.data_formats.tf_detection_api.exporter.float_list_feature">[docs]</a><span class="k">def</span> <span class="nf">float_list_feature</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">Feature</span><span class="p">(</span><span class="n">float_list</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">FloatList</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="n">value</span><span class="p">))</span></div>
 
 
-<div class="viewcode-block" id="TfDetectionApiExporter"><a class="viewcode-back" href="../../../../../docs/reference/plugins/data_formats/tf_detection_api/datumaro.plugins.data_formats.tf_detection_api.exporter.html#datumaro.plugins.data_formats.tf_detection_api.exporter.TfDetectionApiExporter">[docs]</a><span class="k">class</span> <span class="nc">TfDetectionApiExporter</span><span class="p">(</span><span class="n">Exporter</span><span class="p">):</span>
+<div class="viewcode-block" id="TfDetectionApiExporter"><a class="viewcode-back" href="../../../../../docs/reference/_autosummary/datumaro.plugins.data_formats.tf_detection_api.exporter.html#datumaro.plugins.data_formats.tf_detection_api.exporter.TfDetectionApiExporter">[docs]</a><span class="nd">@extra_deps</span><span class="p">(</span><span class="s2">&quot;tensorflow&quot;</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">TfDetectionApiExporter</span><span class="p">(</span><span class="n">Exporter</span><span class="p">):</span>
     <span class="n">DEFAULT_IMAGE_EXT</span> <span class="o">=</span> <span class="n">DetectionApiPath</span><span class="o">.</span><span class="n">DEFAULT_IMAGE_EXT</span>
 
-<div class="viewcode-block" id="TfDetectionApiExporter.build_cmdline_parser"><a class="viewcode-back" href="../../../../../docs/reference/plugins/data_formats/tf_detection_api/datumaro.plugins.data_formats.tf_detection_api.exporter.html#datumaro.plugins.data_formats.tf_detection_api.exporter.TfDetectionApiExporter.build_cmdline_parser">[docs]</a>    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="TfDetectionApiExporter.build_cmdline_parser"><a class="viewcode-back" href="../../../../../docs/reference/_autosummary/datumaro.plugins.data_formats.tf_detection_api.exporter.html#datumaro.plugins.data_formats.tf_detection_api.exporter.TfDetectionApiExporter.build_cmdline_parser">[docs]</a>    <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">build_cmdline_parser</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="n">parser</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">build_cmdline_parser</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
@@ -348,7 +351,7 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_save_masks</span> <span class="o">=</span> <span class="n">save_masks</span>
 
-<div class="viewcode-block" id="TfDetectionApiExporter.apply"><a class="viewcode-back" href="../../../../../docs/reference/plugins/data_formats/tf_detection_api/datumaro.plugins.data_formats.tf_detection_api.exporter.html#datumaro.plugins.data_formats.tf_detection_api.exporter.TfDetectionApiExporter.apply">[docs]</a>    <span class="k">def</span> <span class="nf">apply</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_apply_impl</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_save_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
         <span class="n">label_categories</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extractor</span><span class="o">.</span><span class="n">categories</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">AnnotationType</span><span class="o">.</span><span class="n">label</span><span class="p">,</span> <span class="n">LabelCategories</span><span class="p">())</span>
@@ -374,7 +377,7 @@
             <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">TFRecordWriter</span><span class="p">(</span><span class="n">anno_path</span><span class="p">)</span> <span class="k">as</span> <span class="n">writer</span><span class="p">:</span>
                 <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">subset</span><span class="p">:</span>
                     <span class="n">tf_example</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_make_tf_example</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
-                    <span class="n">writer</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">tf_example</span><span class="o">.</span><span class="n">SerializeToString</span><span class="p">())</span></div>
+                    <span class="n">writer</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">tf_example</span><span class="o">.</span><span class="n">SerializeToString</span><span class="p">())</span>
 
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">_find_instances</span><span class="p">(</span><span class="n">annotations</span><span class="p">):</span>
@@ -447,7 +450,7 @@
         <span class="n">features</span><span class="p">[</span><span class="s2">&quot;image/filename&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">bytes_feature</span><span class="p">(</span><span class="n">filename</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">))</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="o">.</span><span class="n">media</span><span class="p">,</span> <span class="n">Image</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span>
+            <span class="k">raise</span> <span class="n">DatasetExportError</span><span class="p">(</span>
                 <span class="s2">&quot;Failed to export dataset item &#39;</span><span class="si">%s</span><span class="s2">&#39;: &quot;</span> <span class="s2">&quot;item has no image info&quot;</span> <span class="o">%</span> <span class="n">item</span><span class="o">.</span><span class="n">id</span>
             <span class="p">)</span>
         <span class="n">height</span><span class="p">,</span> <span class="n">width</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">media</span><span class="o">.</span><span class="n">size</span>
@@ -509,7 +512,7 @@
             <span class="n">buffer</span> <span class="o">=</span> <span class="n">encode_image</span><span class="p">(</span><span class="n">item</span><span class="o">.</span><span class="n">media</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">dst_ext</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">buffer</span><span class="p">,</span> <span class="n">fmt</span>
 
-<div class="viewcode-block" id="TfDetectionApiExporter.patch"><a class="viewcode-back" href="../../../../../docs/reference/plugins/data_formats/tf_detection_api/datumaro.plugins.data_formats.tf_detection_api.exporter.html#datumaro.plugins.data_formats.tf_detection_api.exporter.TfDetectionApiExporter.patch">[docs]</a>    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="TfDetectionApiExporter.patch"><a class="viewcode-back" href="../../../../../docs/reference/_autosummary/datumaro.plugins.data_formats.tf_detection_api.exporter.html#datumaro.plugins.data_formats.tf_detection_api.exporter.TfDetectionApiExporter.patch">[docs]</a>    <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">patch</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">patch</span><span class="p">,</span> <span class="n">save_dir</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="k">for</span> <span class="n">subset</span> <span class="ow">in</span> <span class="n">patch</span><span class="o">.</span><span class="n">updated_subsets</span><span class="p">:</span>
             <span class="bp">cls</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_subset</span><span class="p">(</span><span class="n">subset</span><span class="p">),</span> <span class="n">save_dir</span><span class="o">=</span><span class="n">save_dir</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div></div>

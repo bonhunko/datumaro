@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>datumaro.components.shift_analyzer &#8212; Datumaro 1.2.0 documentation</title>
+    <title>datumaro.components.shift_analyzer &#8212; Datumaro 1.4.1 documentation</title>
   
   
   
@@ -283,6 +283,7 @@
 
 <span class="c1"># ruff: noqa: E501</span>
 
+<span class="kn">import</span> <span class="nn">itertools</span>
 <span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">defaultdict</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
 
@@ -291,18 +292,21 @@
 <span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">linalg</span>
 <span class="kn">from</span> <span class="nn">scipy.stats</span> <span class="kn">import</span> <span class="n">anderson_ksamp</span>
 
+<span class="kn">from</span> <span class="nn">datumaro.components.annotation</span> <span class="kn">import</span> <span class="n">FeatureVector</span>
 <span class="kn">from</span> <span class="nn">datumaro.components.dataset</span> <span class="kn">import</span> <span class="n">IDataset</span>
-<span class="kn">from</span> <span class="nn">datumaro.plugins.shift_analyzer</span> <span class="kn">import</span> <span class="n">ShiftAnalyzerLauncher</span>
+<span class="kn">from</span> <span class="nn">datumaro.components.launcher</span> <span class="kn">import</span> <span class="n">LauncherWithModelInterpreter</span>
+<span class="kn">from</span> <span class="nn">datumaro.plugins.openvino_plugin.shift_launcher</span> <span class="kn">import</span> <span class="n">ShiftLauncher</span>
 <span class="kn">from</span> <span class="nn">datumaro.util</span> <span class="kn">import</span> <span class="n">take_by</span>
 
 
-<div class="viewcode-block" id="RunningStats1D"><a class="viewcode-back" href="../../../docs/reference/components/components/datumaro.components.shift_analyzer.html#datumaro.components.shift_analyzer.RunningStats1D">[docs]</a><span class="k">class</span> <span class="nc">RunningStats1D</span><span class="p">:</span>
+<div class="viewcode-block" id="RunningStats1D"><a class="viewcode-back" href="../../../docs/reference/_autosummary/datumaro.components.shift_analyzer.html#datumaro.components.shift_analyzer.RunningStats1D">[docs]</a><span class="k">class</span> <span class="nc">RunningStats1D</span><span class="p">:</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">running_mean</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">running_sq_mean</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">num</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
 
-<div class="viewcode-block" id="RunningStats1D.add"><a class="viewcode-back" href="../../../docs/reference/components/components/datumaro.components.shift_analyzer.html#datumaro.components.shift_analyzer.RunningStats1D.add">[docs]</a>    <span class="k">def</span> <span class="nf">add</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">arr</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<div class="viewcode-block" id="RunningStats1D.add"><a class="viewcode-back" href="../../../docs/reference/_autosummary/datumaro.components.shift_analyzer.html#datumaro.components.shift_analyzer.RunningStats1D.add">[docs]</a>    <span class="k">def</span> <span class="nf">add</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">feats</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">FeatureVector</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">feat</span><span class="o">.</span><span class="n">vector</span> <span class="k">for</span> <span class="n">feat</span> <span class="ow">in</span> <span class="n">feats</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
         <span class="k">assert</span> <span class="n">arr</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span>
 
         <span class="n">batch_size</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">arr</span><span class="o">.</span><span class="n">shape</span>
@@ -336,31 +340,27 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">running_sq_mean</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">mean</span><span class="p">,</span> <span class="n">mean</span><span class="o">.</span><span class="n">transpose</span><span class="p">())</span></div>
 
 
-<div class="viewcode-block" id="FeatureAccumulator"><a class="viewcode-back" href="../../../docs/reference/components/components/datumaro.components.shift_analyzer.html#datumaro.components.shift_analyzer.FeatureAccumulator">[docs]</a><span class="k">class</span> <span class="nc">FeatureAccumulator</span><span class="p">:</span>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">):</span>
+<div class="viewcode-block" id="FeatureAccumulator"><a class="viewcode-back" href="../../../docs/reference/_autosummary/datumaro.components.shift_analyzer.html#datumaro.components.shift_analyzer.FeatureAccumulator">[docs]</a><span class="k">class</span> <span class="nc">FeatureAccumulator</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">:</span> <span class="n">LauncherWithModelInterpreter</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">model</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_batch_size</span> <span class="o">=</span> <span class="mi">1</span>
 
-<div class="viewcode-block" id="FeatureAccumulator.get_activation_stats"><a class="viewcode-back" href="../../../docs/reference/components/components/datumaro.components.shift_analyzer.html#datumaro.components.shift_analyzer.FeatureAccumulator.get_activation_stats">[docs]</a>    <span class="k">def</span> <span class="nf">get_activation_stats</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="n">IDataset</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">RunningStats1D</span><span class="p">:</span>
+<div class="viewcode-block" id="FeatureAccumulator.get_activation_stats"><a class="viewcode-back" href="../../../docs/reference/_autosummary/datumaro.components.shift_analyzer.html#datumaro.components.shift_analyzer.FeatureAccumulator.get_activation_stats">[docs]</a>    <span class="k">def</span> <span class="nf">get_activation_stats</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="n">IDataset</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">RunningStats1D</span><span class="p">:</span>
         <span class="n">running_stats</span> <span class="o">=</span> <span class="n">RunningStats1D</span><span class="p">()</span>
 
         <span class="k">for</span> <span class="n">batch</span> <span class="ow">in</span> <span class="n">take_by</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_batch_size</span><span class="p">):</span>
-            <span class="n">inputs</span> <span class="o">=</span> <span class="p">[]</span>
-            <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">batch</span><span class="p">:</span>
-                <span class="n">inputs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">atleast_3d</span><span class="p">(</span><span class="n">item</span><span class="o">.</span><span class="n">media</span><span class="o">.</span><span class="n">data</span><span class="p">))</span>
-            <span class="n">inputs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
-            <span class="n">features</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">launch</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
-            <span class="n">running_stats</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">features</span><span class="p">)</span>
+            <span class="n">features</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">launch</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span>
+            <span class="n">running_stats</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">itertools</span><span class="o">.</span><span class="n">chain</span><span class="p">(</span><span class="o">*</span><span class="n">features</span><span class="p">)))</span>
 
         <span class="k">return</span> <span class="n">running_stats</span></div></div>
 
 
-<div class="viewcode-block" id="FeatureAccumulatorByLabel"><a class="viewcode-back" href="../../../docs/reference/components/components/datumaro.components.shift_analyzer.html#datumaro.components.shift_analyzer.FeatureAccumulatorByLabel">[docs]</a><span class="k">class</span> <span class="nc">FeatureAccumulatorByLabel</span><span class="p">(</span><span class="n">FeatureAccumulator</span><span class="p">):</span>
+<div class="viewcode-block" id="FeatureAccumulatorByLabel"><a class="viewcode-back" href="../../../docs/reference/_autosummary/datumaro.components.shift_analyzer.html#datumaro.components.shift_analyzer.FeatureAccumulatorByLabel">[docs]</a><span class="k">class</span> <span class="nc">FeatureAccumulatorByLabel</span><span class="p">(</span><span class="n">FeatureAccumulator</span><span class="p">):</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
 
-<div class="viewcode-block" id="FeatureAccumulatorByLabel.get_activation_stats"><a class="viewcode-back" href="../../../docs/reference/components/components/datumaro.components.shift_analyzer.html#datumaro.components.shift_analyzer.FeatureAccumulatorByLabel.get_activation_stats">[docs]</a>    <span class="k">def</span> <span class="nf">get_activation_stats</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="n">IDataset</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">RunningStats1D</span><span class="p">]:</span>
-        <span class="n">running_stats</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">RunningStats1D</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+<div class="viewcode-block" id="FeatureAccumulatorByLabel.get_activation_stats"><a class="viewcode-back" href="../../../docs/reference/_autosummary/datumaro.components.shift_analyzer.html#datumaro.components.shift_analyzer.FeatureAccumulatorByLabel.get_activation_stats">[docs]</a>    <span class="k">def</span> <span class="nf">get_activation_stats</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="n">IDataset</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">RunningStats1D</span><span class="p">]:</span>
+        <span class="n">running_stats</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="n">RunningStats1D</span><span class="p">)</span>
 
         <span class="k">for</span> <span class="n">batch</span> <span class="ow">in</span> <span class="n">take_by</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_batch_size</span><span class="p">):</span>
             <span class="n">inputs</span><span class="p">,</span> <span class="n">targets</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[]</span>
@@ -369,20 +369,15 @@
                     <span class="n">inputs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">atleast_3d</span><span class="p">(</span><span class="n">item</span><span class="o">.</span><span class="n">media</span><span class="o">.</span><span class="n">data</span><span class="p">))</span>
                     <span class="n">targets</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ann</span><span class="o">.</span><span class="n">label</span><span class="p">)</span>
 
-            <span class="n">inputs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
-            <span class="n">features</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">launch</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+            <span class="n">features</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">launch</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span>
 
-            <span class="n">unique_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">targets</span><span class="p">)</span>
-            <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="n">unique_indices</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">idx</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">running_stats</span><span class="p">:</span>
-                    <span class="n">running_stats</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">RunningStats1D</span><span class="p">()</span>
-
-                <span class="n">running_stats</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">features</span><span class="p">[</span><span class="n">targets</span> <span class="o">==</span> <span class="n">idx</span><span class="p">])</span>
+            <span class="k">for</span> <span class="n">feat</span><span class="p">,</span> <span class="n">target</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">features</span><span class="p">,</span> <span class="n">targets</span><span class="p">):</span>
+                <span class="n">running_stats</span><span class="p">[</span><span class="n">target</span><span class="p">]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">feat</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">running_stats</span></div></div>
 
 
-<div class="viewcode-block" id="ShiftAnalyzer"><a class="viewcode-back" href="../../../docs/reference/components/components/datumaro.components.shift_analyzer.html#datumaro.components.shift_analyzer.ShiftAnalyzer">[docs]</a><span class="k">class</span> <span class="nc">ShiftAnalyzer</span><span class="p">:</span>
+<div class="viewcode-block" id="ShiftAnalyzer"><a class="viewcode-back" href="../../../docs/reference/_autosummary/datumaro.components.shift_analyzer.html#datumaro.components.shift_analyzer.ShiftAnalyzer">[docs]</a><span class="k">class</span> <span class="nc">ShiftAnalyzer</span><span class="p">:</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Searcher for Datumaro dataitems</span>
@@ -394,12 +389,12 @@
 <span class="sd">        topk:</span>
 <span class="sd">            Number of images.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_model</span> <span class="o">=</span> <span class="n">ShiftAnalyzerLauncher</span><span class="p">(</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_model</span> <span class="o">=</span> <span class="n">ShiftLauncher</span><span class="p">(</span>
             <span class="n">model_name</span><span class="o">=</span><span class="s2">&quot;googlenet-v4-tf&quot;</span><span class="p">,</span>
-            <span class="n">output_layers</span><span class="o">=</span><span class="s2">&quot;InceptionV4/Logits/PreLogitsFlatten/flatten_1/Reshape&quot;</span><span class="p">,</span>
+            <span class="n">output_layers</span><span class="o">=</span><span class="s2">&quot;InceptionV4/Logits/PreLogitsFlatten/flatten_1/Reshape:0&quot;</span><span class="p">,</span>
         <span class="p">)</span>
 
-<div class="viewcode-block" id="ShiftAnalyzer.compute_covariate_shift"><a class="viewcode-back" href="../../../docs/reference/components/components/datumaro.components.shift_analyzer.html#datumaro.components.shift_analyzer.ShiftAnalyzer.compute_covariate_shift">[docs]</a>    <span class="k">def</span> <span class="nf">compute_covariate_shift</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sources</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">IDataset</span><span class="p">],</span> <span class="n">method</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;fid&quot;</span><span class="p">):</span>
+<div class="viewcode-block" id="ShiftAnalyzer.compute_covariate_shift"><a class="viewcode-back" href="../../../docs/reference/_autosummary/datumaro.components.shift_analyzer.html#datumaro.components.shift_analyzer.ShiftAnalyzer.compute_covariate_shift">[docs]</a>    <span class="k">def</span> <span class="nf">compute_covariate_shift</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sources</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">IDataset</span><span class="p">],</span> <span class="n">method</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;fid&quot;</span><span class="p">):</span>
         <span class="k">assert</span> <span class="p">(</span>
             <span class="nb">len</span><span class="p">(</span><span class="n">sources</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span>
         <span class="p">),</span> <span class="s2">&quot;Shift analyzer should get two datasets to compute shifts between them.&quot;</span>
@@ -431,7 +426,7 @@
             <span class="c1"># We return the dissimilarity score by 1 - similarity score.</span>
             <span class="k">return</span> <span class="mf">1.0</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_earth_mover_distance</span><span class="p">(</span><span class="n">w_s</span><span class="p">,</span> <span class="n">f_s</span><span class="p">,</span> <span class="n">w_t</span><span class="p">,</span> <span class="n">f_t</span><span class="p">,</span> <span class="n">gamma</span><span class="o">=</span><span class="mf">0.01</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="ShiftAnalyzer.compute_label_shift"><a class="viewcode-back" href="../../../docs/reference/components/components/datumaro.components.shift_analyzer.html#datumaro.components.shift_analyzer.ShiftAnalyzer.compute_label_shift">[docs]</a>    <span class="k">def</span> <span class="nf">compute_label_shift</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sources</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">IDataset</span><span class="p">]):</span>
+<div class="viewcode-block" id="ShiftAnalyzer.compute_label_shift"><a class="viewcode-back" href="../../../docs/reference/_autosummary/datumaro.components.shift_analyzer.html#datumaro.components.shift_analyzer.ShiftAnalyzer.compute_label_shift">[docs]</a>    <span class="k">def</span> <span class="nf">compute_label_shift</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sources</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">IDataset</span><span class="p">]):</span>
         <span class="k">assert</span> <span class="p">(</span>
             <span class="nb">len</span><span class="p">(</span><span class="n">sources</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span>
         <span class="p">),</span> <span class="s2">&quot;Shift analyzer should get two datasets to compute shifts between them.&quot;</span>

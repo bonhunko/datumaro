@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>datumaro.plugins.data_formats.cifar &#8212; Datumaro 1.2.0 documentation</title>
+    <title>datumaro.plugins.data_formats.cifar &#8212; Datumaro 1.4.1 documentation</title>
   
   
   
@@ -281,28 +281,29 @@
 <span class="c1">#</span>
 <span class="c1"># SPDX-License-Identifier: MIT</span>
 
+<span class="kn">import</span> <span class="nn">errno</span>
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">os.path</span> <span class="k">as</span> <span class="nn">osp</span>
-<span class="kn">import</span> <span class="nn">pickle</span>  <span class="c1"># nosec import_pickle</span>
+<span class="kn">import</span> <span class="nn">pickle</span>  <span class="c1"># nosec B403</span>
 <span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">OrderedDict</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
 <span class="kn">from</span> <span class="nn">datumaro.components.annotation</span> <span class="kn">import</span> <span class="n">AnnotationType</span><span class="p">,</span> <span class="n">Label</span><span class="p">,</span> <span class="n">LabelCategories</span>
-<span class="kn">from</span> <span class="nn">datumaro.components.dataset</span> <span class="kn">import</span> <span class="n">ItemStatus</span>
 <span class="kn">from</span> <span class="nn">datumaro.components.dataset_base</span> <span class="kn">import</span> <span class="n">DatasetItem</span><span class="p">,</span> <span class="n">SubsetBase</span>
-<span class="kn">from</span> <span class="nn">datumaro.components.errors</span> <span class="kn">import</span> <span class="n">MediaTypeError</span>
+<span class="kn">from</span> <span class="nn">datumaro.components.dataset_item_storage</span> <span class="kn">import</span> <span class="n">ItemStatus</span>
+<span class="kn">from</span> <span class="nn">datumaro.components.errors</span> <span class="kn">import</span> <span class="n">InvalidAnnotationError</span><span class="p">,</span> <span class="n">MediaTypeError</span>
 <span class="kn">from</span> <span class="nn">datumaro.components.exporter</span> <span class="kn">import</span> <span class="n">Exporter</span>
 <span class="kn">from</span> <span class="nn">datumaro.components.format_detection</span> <span class="kn">import</span> <span class="n">FormatDetectionConfidence</span><span class="p">,</span> <span class="n">FormatDetectionContext</span>
-<span class="kn">from</span> <span class="nn">datumaro.components.importer</span> <span class="kn">import</span> <span class="n">Importer</span>
+<span class="kn">from</span> <span class="nn">datumaro.components.importer</span> <span class="kn">import</span> <span class="n">ImportContext</span><span class="p">,</span> <span class="n">Importer</span>
 <span class="kn">from</span> <span class="nn">datumaro.components.media</span> <span class="kn">import</span> <span class="n">Image</span>
 <span class="kn">from</span> <span class="nn">datumaro.util</span> <span class="kn">import</span> <span class="n">cast</span>
 <span class="kn">from</span> <span class="nn">datumaro.util.meta_file_util</span> <span class="kn">import</span> <span class="n">has_meta_file</span><span class="p">,</span> <span class="n">parse_meta_file</span>
 <span class="kn">from</span> <span class="nn">datumaro.util.pickle_util</span> <span class="kn">import</span> <span class="n">PickleLoader</span>
 
 
-<div class="viewcode-block" id="CifarPath"><a class="viewcode-back" href="../../../../docs/reference/plugins/data_formats/datumaro.plugins.data_formats.cifar.html#datumaro.plugins.data_formats.cifar.CifarPath">[docs]</a><span class="k">class</span> <span class="nc">CifarPath</span><span class="p">:</span>
+<div class="viewcode-block" id="CifarPath"><a class="viewcode-back" href="../../../../docs/reference/_autosummary/datumaro.plugins.data_formats.cifar.html#datumaro.plugins.data_formats.cifar.CifarPath">[docs]</a><span class="k">class</span> <span class="nc">CifarPath</span><span class="p">:</span>
     <span class="n">META_10_FILE</span> <span class="o">=</span> <span class="s2">&quot;batches.meta&quot;</span>
     <span class="n">META_100_FILE</span> <span class="o">=</span> <span class="s2">&quot;meta&quot;</span>
     <span class="n">TRAIN_FILE_PREFIX</span> <span class="o">=</span> <span class="s2">&quot;data_batch_&quot;</span>
@@ -326,15 +327,21 @@
 <span class="c1"># Support for Python version CIFAR-10/100</span>
 
 
-<div class="viewcode-block" id="CifarBase"><a class="viewcode-back" href="../../../../docs/reference/plugins/data_formats/datumaro.plugins.data_formats.cifar.html#datumaro.plugins.data_formats.cifar.CifarBase">[docs]</a><span class="k">class</span> <span class="nc">CifarBase</span><span class="p">(</span><span class="n">SubsetBase</span><span class="p">):</span>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">subset</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="CifarBase"><a class="viewcode-back" href="../../../../docs/reference/_autosummary/datumaro.plugins.data_formats.cifar.html#datumaro.plugins.data_formats.cifar.CifarBase">[docs]</a><span class="k">class</span> <span class="nc">CifarBase</span><span class="p">(</span><span class="n">SubsetBase</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">subset</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">ctx</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ImportContext</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">osp</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="s2">&quot;Can&#39;t read annotation file &#39;</span><span class="si">%s</span><span class="s2">&#39;&quot;</span> <span class="o">%</span> <span class="n">path</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="n">errno</span><span class="o">.</span><span class="n">ENOENT</span><span class="p">,</span> <span class="s2">&quot;Can&#39;t find annotations file&quot;</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="n">subset</span><span class="p">:</span>
             <span class="n">subset</span> <span class="o">=</span> <span class="n">osp</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">osp</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">path</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
 
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="n">subset</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="n">subset</span><span class="p">,</span> <span class="n">ctx</span><span class="o">=</span><span class="n">ctx</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_categories</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_categories</span><span class="p">(</span><span class="n">osp</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_items</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_load_items</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
@@ -400,10 +407,14 @@
         <span class="n">size</span> <span class="o">=</span> <span class="n">annotation_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;image_sizes&quot;</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">labels</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">filenames</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;The sizes of the arrays &#39;filenames&#39;, &quot;</span> <span class="s2">&quot;&#39;labels&#39; don&#39;t match.&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">InvalidAnnotationError</span><span class="p">(</span>
+                <span class="s2">&quot;The sizes of the arrays &#39;filenames&#39;, &quot;</span> <span class="s2">&quot;&#39;labels&#39; don&#39;t match.&quot;</span>
+            <span class="p">)</span>
 
         <span class="k">if</span> <span class="mi">0</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">images_data</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">images_data</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">filenames</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;The sizes of the arrays &#39;data&#39;, &quot;</span> <span class="s2">&quot;&#39;filenames&#39;, &#39;labels&#39; don&#39;t match.&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">InvalidAnnotationError</span><span class="p">(</span>
+                <span class="s2">&quot;The sizes of the arrays &#39;data&#39;, &quot;</span> <span class="s2">&quot;&#39;filenames&#39;, &#39;labels&#39; don&#39;t match.&quot;</span>
+            <span class="p">)</span>
 
         <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">filenames</span><span class="p">,</span> <span class="n">labels</span><span class="p">)):</span>
             <span class="n">item_id</span> <span class="o">=</span> <span class="n">osp</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">filename</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
@@ -439,8 +450,8 @@
         <span class="k">return</span> <span class="n">items</span></div>
 
 
-<div class="viewcode-block" id="CifarImporter"><a class="viewcode-back" href="../../../../docs/reference/plugins/data_formats/datumaro.plugins.data_formats.cifar.html#datumaro.plugins.data_formats.cifar.CifarImporter">[docs]</a><span class="k">class</span> <span class="nc">CifarImporter</span><span class="p">(</span><span class="n">Importer</span><span class="p">):</span>
-<div class="viewcode-block" id="CifarImporter.detect"><a class="viewcode-back" href="../../../../docs/reference/plugins/data_formats/datumaro.plugins.data_formats.cifar.html#datumaro.plugins.data_formats.cifar.CifarImporter.detect">[docs]</a>    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="CifarImporter"><a class="viewcode-back" href="../../../../docs/reference/_autosummary/datumaro.plugins.data_formats.cifar.html#datumaro.plugins.data_formats.cifar.CifarImporter">[docs]</a><span class="k">class</span> <span class="nc">CifarImporter</span><span class="p">(</span><span class="n">Importer</span><span class="p">):</span>
+<div class="viewcode-block" id="CifarImporter.detect"><a class="viewcode-back" href="../../../../docs/reference/_autosummary/datumaro.plugins.data_formats.cifar.html#datumaro.plugins.data_formats.cifar.CifarImporter.detect">[docs]</a>    <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">detect</span><span class="p">(</span>
         <span class="bp">cls</span><span class="p">,</span>
         <span class="n">context</span><span class="p">:</span> <span class="n">FormatDetectionContext</span><span class="p">,</span>
@@ -449,7 +460,7 @@
 
         <span class="k">return</span> <span class="n">FormatDetectionConfidence</span><span class="o">.</span><span class="n">MEDIUM</span></div>
 
-<div class="viewcode-block" id="CifarImporter.find_sources"><a class="viewcode-back" href="../../../../docs/reference/plugins/data_formats/datumaro.plugins.data_formats.cifar.html#datumaro.plugins.data_formats.cifar.CifarImporter.find_sources">[docs]</a>    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="CifarImporter.find_sources"><a class="viewcode-back" href="../../../../docs/reference/_autosummary/datumaro.plugins.data_formats.cifar.html#datumaro.plugins.data_formats.cifar.CifarImporter.find_sources">[docs]</a>    <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">find_sources</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
         <span class="k">def</span> <span class="nf">_find</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">meta_file_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
             <span class="c1"># Find dataset root by looking for the meta file</span>
@@ -470,7 +481,8 @@
                     <span class="s2">&quot;cifar&quot;</span><span class="p">,</span>
                     <span class="c1"># Subset files have no extension in the format, and</span>
                     <span class="c1"># should not be the meta file.</span>
-                    <span class="n">file_filter</span><span class="o">=</span><span class="k">lambda</span> <span class="n">p</span><span class="p">:</span> <span class="ow">not</span> <span class="n">osp</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">osp</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">p</span><span class="p">))[</span><span class="mi">1</span><span class="p">]</span>
+                    <span class="n">file_filter</span><span class="o">=</span><span class="k">lambda</span> <span class="n">p</span><span class="p">:</span> <span class="ow">not</span> <span class="n">osp</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+                    <span class="ow">and</span> <span class="ow">not</span> <span class="n">osp</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">osp</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">p</span><span class="p">))[</span><span class="mi">1</span><span class="p">]</span>
                     <span class="ow">and</span> <span class="n">osp</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="o">!=</span> <span class="n">meta_file_name</span><span class="p">,</span>
                 <span class="p">)</span>
 
@@ -483,10 +495,10 @@
         <span class="k">return</span> <span class="n">sources</span></div></div>
 
 
-<div class="viewcode-block" id="CifarExporter"><a class="viewcode-back" href="../../../../docs/reference/plugins/data_formats/datumaro.plugins.data_formats.cifar.html#datumaro.plugins.data_formats.cifar.CifarExporter">[docs]</a><span class="k">class</span> <span class="nc">CifarExporter</span><span class="p">(</span><span class="n">Exporter</span><span class="p">):</span>
+<div class="viewcode-block" id="CifarExporter"><a class="viewcode-back" href="../../../../docs/reference/_autosummary/datumaro.plugins.data_formats.cifar.html#datumaro.plugins.data_formats.cifar.CifarExporter">[docs]</a><span class="k">class</span> <span class="nc">CifarExporter</span><span class="p">(</span><span class="n">Exporter</span><span class="p">):</span>
     <span class="n">DEFAULT_IMAGE_EXT</span> <span class="o">=</span> <span class="s2">&quot;.png&quot;</span>
 
-<div class="viewcode-block" id="CifarExporter.apply"><a class="viewcode-back" href="../../../../docs/reference/plugins/data_formats/datumaro.plugins.data_formats.cifar.html#datumaro.plugins.data_formats.cifar.CifarExporter.apply">[docs]</a>    <span class="k">def</span> <span class="nf">apply</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_apply_impl</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extractor</span><span class="o">.</span><span class="n">media_type</span><span class="p">()</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">issubclass</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_extractor</span><span class="o">.</span><span class="n">media_type</span><span class="p">(),</span> <span class="n">Image</span><span class="p">):</span>
             <span class="k">raise</span> <span class="n">MediaTypeError</span><span class="p">(</span><span class="s2">&quot;Media type is not an image&quot;</span><span class="p">)</span>
 
@@ -591,9 +603,9 @@
                 <span class="k">continue</span>
 
             <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">annotation_file</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">labels_file</span><span class="p">:</span>
-                <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">annotation_dict</span><span class="p">,</span> <span class="n">labels_file</span><span class="p">)</span></div>
+                <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">annotation_dict</span><span class="p">,</span> <span class="n">labels_file</span><span class="p">)</span>
 
-<div class="viewcode-block" id="CifarExporter.patch"><a class="viewcode-back" href="../../../../docs/reference/plugins/data_formats/datumaro.plugins.data_formats.cifar.html#datumaro.plugins.data_formats.cifar.CifarExporter.patch">[docs]</a>    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="CifarExporter.patch"><a class="viewcode-back" href="../../../../docs/reference/_autosummary/datumaro.plugins.data_formats.cifar.html#datumaro.plugins.data_formats.cifar.CifarExporter.patch">[docs]</a>    <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">patch</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">patch</span><span class="p">,</span> <span class="n">save_dir</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="k">for</span> <span class="n">subset</span> <span class="ow">in</span> <span class="n">patch</span><span class="o">.</span><span class="n">updated_subsets</span><span class="p">:</span>
             <span class="n">conv</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_subset</span><span class="p">(</span><span class="n">subset</span><span class="p">),</span> <span class="n">save_dir</span><span class="o">=</span><span class="n">save_dir</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>

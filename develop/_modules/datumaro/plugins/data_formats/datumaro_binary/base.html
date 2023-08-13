@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>datumaro.plugins.data_formats.datumaro_binary.base &#8212; Datumaro 1.2.0 documentation</title>
+    <title>datumaro.plugins.data_formats.datumaro_binary.base &#8212; Datumaro 1.4.1 documentation</title>
   
   
   
@@ -290,19 +290,28 @@
 <span class="kn">from</span> <span class="nn">datumaro.components.crypter</span> <span class="kn">import</span> <span class="n">NULL_CRYPTER</span><span class="p">,</span> <span class="n">Crypter</span>
 <span class="kn">from</span> <span class="nn">datumaro.components.dataset_base</span> <span class="kn">import</span> <span class="n">DatasetItem</span>
 <span class="kn">from</span> <span class="nn">datumaro.components.errors</span> <span class="kn">import</span> <span class="n">DatasetImportError</span>
+<span class="kn">from</span> <span class="nn">datumaro.components.importer</span> <span class="kn">import</span> <span class="n">ImportContext</span>
 <span class="kn">from</span> <span class="nn">datumaro.components.media</span> <span class="kn">import</span> <span class="n">Image</span><span class="p">,</span> <span class="n">MediaElement</span><span class="p">,</span> <span class="n">MediaType</span><span class="p">,</span> <span class="n">PointCloud</span>
 <span class="kn">from</span> <span class="nn">datumaro.plugins.data_formats.datumaro_binary.format</span> <span class="kn">import</span> <span class="n">DatumaroBinaryPath</span>
 <span class="kn">from</span> <span class="nn">datumaro.plugins.data_formats.datumaro_binary.mapper</span> <span class="kn">import</span> <span class="n">DictMapper</span>
 <span class="kn">from</span> <span class="nn">datumaro.plugins.data_formats.datumaro_binary.mapper.common</span> <span class="kn">import</span> <span class="n">IntListMapper</span>
 <span class="kn">from</span> <span class="nn">datumaro.plugins.data_formats.datumaro_binary.mapper.dataset_item</span> <span class="kn">import</span> <span class="n">DatasetItemMapper</span>
 
-<span class="kn">from</span> <span class="nn">..datumaro.base</span> <span class="kn">import</span> <span class="n">DatumaroBase</span>
+<span class="kn">from</span> <span class="nn">..datumaro.base</span> <span class="kn">import</span> <span class="n">DatumaroBase</span><span class="p">,</span> <span class="n">JsonReader</span>
 
 
-<div class="viewcode-block" id="DatumaroBinaryBase"><a class="viewcode-back" href="../../../../../docs/reference/plugins/data_formats/datumaro_binary/datumaro.plugins.data_formats.datumaro_binary.base.html#datumaro.plugins.data_formats.datumaro_binary.DatumaroBinaryBase">[docs]</a><span class="k">class</span> <span class="nc">DatumaroBinaryBase</span><span class="p">(</span><span class="n">DatumaroBase</span><span class="p">):</span>
+<div class="viewcode-block" id="DatumaroBinaryBase"><a class="viewcode-back" href="../../../../../docs/reference/_autosummary/datumaro.plugins.data_formats.datumaro_binary.base.html#datumaro.plugins.data_formats.datumaro_binary.DatumaroBinaryBase">[docs]</a><span class="k">class</span> <span class="nc">DatumaroBinaryBase</span><span class="p">(</span><span class="n">DatumaroBase</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;&quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">encryption_key</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bytes</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">num_workers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">encryption_key</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bytes</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">num_workers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="n">subset</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">ctx</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ImportContext</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -317,7 +326,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_crypter</span> <span class="o">=</span> <span class="n">Crypter</span><span class="p">(</span><span class="n">encryption_key</span><span class="p">)</span> <span class="k">if</span> <span class="n">encryption_key</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">NULL_CRYPTER</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_media_encryption</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_num_workers</span> <span class="o">=</span> <span class="n">num_workers</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">subset</span><span class="o">=</span><span class="n">subset</span><span class="p">,</span> <span class="n">ctx</span><span class="o">=</span><span class="n">ctx</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_get_dm_format_version</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
         <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
@@ -370,7 +379,7 @@
 
     <span class="k">def</span> <span class="nf">_read_categories</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">categories</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_header</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_categories</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_categories</span><span class="p">({</span><span class="s2">&quot;categories&quot;</span><span class="p">:</span> <span class="n">categories</span><span class="p">})</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_categories</span> <span class="o">=</span> <span class="n">JsonReader</span><span class="o">.</span><span class="n">_load_categories</span><span class="p">({</span><span class="s2">&quot;categories&quot;</span><span class="p">:</span> <span class="n">categories</span><span class="p">})</span>
 
     <span class="k">def</span> <span class="nf">_read_media_type</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">media_type</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_header</span><span class="p">()[</span><span class="s2">&quot;media_type&quot;</span><span class="p">]</span>
@@ -454,7 +463,26 @@
 
         <span class="k">assert</span> <span class="n">offset</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">blob_bytes</span><span class="p">)</span>
 
-        <span class="k">return</span> <span class="n">items</span></div>
+        <span class="k">return</span> <span class="n">items</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_stream</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
+<div class="viewcode-block" id="DatumaroBinaryBase.infos"><a class="viewcode-back" href="../../../../../docs/reference/_autosummary/datumaro.plugins.data_formats.datumaro_binary.base.html#datumaro.plugins.data_formats.datumaro_binary.DatumaroBinaryBase.infos">[docs]</a>    <span class="k">def</span> <span class="nf">infos</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_infos</span></div>
+
+<div class="viewcode-block" id="DatumaroBinaryBase.categories"><a class="viewcode-back" href="../../../../../docs/reference/_autosummary/datumaro.plugins.data_formats.datumaro_binary.base.html#datumaro.plugins.data_formats.datumaro_binary.DatumaroBinaryBase.categories">[docs]</a>    <span class="k">def</span> <span class="nf">categories</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_categories</span></div>
+
+<div class="viewcode-block" id="DatumaroBinaryBase.media_type"><a class="viewcode-back" href="../../../../../docs/reference/_autosummary/datumaro.plugins.data_formats.datumaro_binary.base.html#datumaro.plugins.data_formats.datumaro_binary.DatumaroBinaryBase.media_type">[docs]</a>    <span class="k">def</span> <span class="nf">media_type</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_media_type</span></div>
+
+    <span class="k">def</span> <span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_items</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DatasetItem</span><span class="p">:</span>
+        <span class="k">yield from</span> <span class="bp">self</span><span class="o">.</span><span class="n">_items</span></div>
 </pre></div>
 
             </article>

@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>datumaro.cli.commands.stats &#8212; Datumaro 1.2.0 documentation</title>
+    <title>datumaro.cli.commands.stats &#8212; Datumaro 1.4.1 documentation</title>
   
   
   
@@ -284,7 +284,8 @@
 <span class="kn">import</span> <span class="nn">argparse</span>
 <span class="kn">import</span> <span class="nn">logging</span> <span class="k">as</span> <span class="nn">log</span>
 
-<span class="kn">from</span> <span class="nn">datumaro.components.errors</span> <span class="kn">import</span> <span class="n">ProjectNotFoundError</span>
+<span class="kn">from</span> <span class="nn">datumaro.cli.util.errors</span> <span class="kn">import</span> <span class="n">CliException</span><span class="p">,</span> <span class="n">WrongRevpathError</span>
+<span class="kn">from</span> <span class="nn">datumaro.components.errors</span> <span class="kn">import</span> <span class="n">ConflictingCategoriesError</span><span class="p">,</span> <span class="n">ProjectNotFoundError</span>
 <span class="kn">from</span> <span class="nn">datumaro.components.operations</span> <span class="kn">import</span> <span class="n">compute_ann_statistics</span><span class="p">,</span> <span class="n">compute_image_statistics</span>
 <span class="kn">from</span> <span class="nn">datumaro.util</span> <span class="kn">import</span> <span class="n">dump_json_file</span><span class="p">,</span> <span class="n">str_to_bool</span>
 <span class="kn">from</span> <span class="nn">datumaro.util.scope</span> <span class="kn">import</span> <span class="n">scope_add</span><span class="p">,</span> <span class="n">scoped</span>
@@ -298,7 +299,7 @@
 <span class="p">]</span>
 
 
-<div class="viewcode-block" id="build_parser"><a class="viewcode-back" href="../../../../docs/reference/cli/commands/datumaro.cli.commands.stats.html#datumaro.cli.commands.stats.build_parser">[docs]</a><span class="k">def</span> <span class="nf">build_parser</span><span class="p">(</span><span class="n">parser_ctor</span><span class="o">=</span><span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">):</span>
+<div class="viewcode-block" id="build_parser"><a class="viewcode-back" href="../../../../docs/reference/_autosummary/datumaro.cli.commands.stats.html#datumaro.cli.commands.stats.build_parser">[docs]</a><span class="k">def</span> <span class="nf">build_parser</span><span class="p">(</span><span class="n">parser_ctor</span><span class="o">=</span><span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">):</span>
     <span class="n">parser</span> <span class="o">=</span> <span class="n">parser_ctor</span><span class="p">(</span>
         <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Get project statistics&quot;</span><span class="p">,</span>
         <span class="n">description</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
@@ -351,13 +352,13 @@
     <span class="k">return</span> <span class="n">parser</span></div>
 
 
-<div class="viewcode-block" id="get_sensitive_args"><a class="viewcode-back" href="../../../../docs/reference/cli/commands/datumaro.cli.commands.stats.html#datumaro.cli.commands.stats.get_sensitive_args">[docs]</a><span class="k">def</span> <span class="nf">get_sensitive_args</span><span class="p">():</span>
+<div class="viewcode-block" id="get_sensitive_args"><a class="viewcode-back" href="../../../../docs/reference/_autosummary/datumaro.cli.commands.stats.html#datumaro.cli.commands.stats.get_sensitive_args">[docs]</a><span class="k">def</span> <span class="nf">get_sensitive_args</span><span class="p">():</span>
     <span class="k">return</span> <span class="p">{</span>
         <span class="n">stats_command</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;project_dir&quot;</span><span class="p">,</span> <span class="s2">&quot;target&quot;</span><span class="p">],</span>
     <span class="p">}</span></div>
 
 
-<div class="viewcode-block" id="stats_command"><a class="viewcode-back" href="../../../../docs/reference/cli/commands/datumaro.cli.commands.stats.html#datumaro.cli.commands.stats.stats_command">[docs]</a><span class="nd">@scoped</span>
+<div class="viewcode-block" id="stats_command"><a class="viewcode-back" href="../../../../docs/reference/_autosummary/datumaro.cli.commands.stats.html#datumaro.cli.commands.stats.stats_command">[docs]</a><span class="nd">@scoped</span>
 <span class="k">def</span> <span class="nf">stats_command</span><span class="p">(</span><span class="n">args</span><span class="p">):</span>
     <span class="n">project</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="k">try</span><span class="p">:</span>
@@ -366,7 +367,21 @@
         <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">project_dir</span><span class="p">:</span>
             <span class="k">raise</span>
 
-    <span class="n">dataset</span><span class="p">,</span> <span class="n">target_project</span> <span class="o">=</span> <span class="n">parse_full_revpath</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">target</span><span class="p">,</span> <span class="n">project</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">dataset</span><span class="p">,</span> <span class="n">target_project</span> <span class="o">=</span> <span class="n">parse_full_revpath</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">target</span><span class="p">,</span> <span class="n">project</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">WrongRevpathError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">e</span><span class="o">.</span><span class="n">problems</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">ConflictingCategoriesError</span><span class="p">):</span>
+                <span class="n">src_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">src</span> <span class="k">for</span> <span class="n">src</span> <span class="ow">in</span> <span class="n">project</span><span class="o">.</span><span class="n">working_tree</span><span class="o">.</span><span class="n">sources</span><span class="p">]</span>
+                <span class="k">raise</span> <span class="n">CliException</span><span class="p">(</span>
+                    <span class="s2">&quot;There are more than two sources with heterogeneous categories in the project. &quot;</span>
+                    <span class="s2">&quot;This prevents computing the statistics of the merged one. &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;Please specify one of the sources in the project (</span><span class="si">{</span><span class="n">src_names</span><span class="si">}</span><span class="s2">), &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;such as `datum stats </span><span class="si">{</span><span class="n">src_names</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">`&quot;</span>
+                <span class="p">)</span> <span class="kn">from</span> <span class="nn">e</span>
+
+        <span class="k">raise</span> <span class="n">e</span>
+
     <span class="k">if</span> <span class="n">target_project</span><span class="p">:</span>
         <span class="n">scope_add</span><span class="p">(</span><span class="n">target_project</span><span class="p">)</span>
 

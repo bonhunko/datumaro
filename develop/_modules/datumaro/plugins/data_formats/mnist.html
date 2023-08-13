@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>datumaro.plugins.data_formats.mnist &#8212; Datumaro 1.2.0 documentation</title>
+    <title>datumaro.plugins.data_formats.mnist &#8212; Datumaro 1.4.1 documentation</title>
   
   
   
@@ -277,13 +277,15 @@
             <article class="bd-article" role="main">
               
   <h1>Source code for datumaro.plugins.data_formats.mnist</h1><div class="highlight"><pre>
-<span></span><span class="c1"># Copyright (C) 2021 Intel Corporation</span>
+<span></span><span class="c1"># Copyright (C) 2021-2023 Intel Corporation</span>
 <span class="c1">#</span>
 <span class="c1"># SPDX-License-Identifier: MIT</span>
 
+<span class="kn">import</span> <span class="nn">errno</span>
 <span class="kn">import</span> <span class="nn">gzip</span>
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">os.path</span> <span class="k">as</span> <span class="nn">osp</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
@@ -291,12 +293,12 @@
 <span class="kn">from</span> <span class="nn">datumaro.components.dataset_base</span> <span class="kn">import</span> <span class="n">DatasetItem</span><span class="p">,</span> <span class="n">SubsetBase</span>
 <span class="kn">from</span> <span class="nn">datumaro.components.errors</span> <span class="kn">import</span> <span class="n">MediaTypeError</span>
 <span class="kn">from</span> <span class="nn">datumaro.components.exporter</span> <span class="kn">import</span> <span class="n">Exporter</span>
-<span class="kn">from</span> <span class="nn">datumaro.components.importer</span> <span class="kn">import</span> <span class="n">Importer</span>
+<span class="kn">from</span> <span class="nn">datumaro.components.importer</span> <span class="kn">import</span> <span class="n">ImportContext</span><span class="p">,</span> <span class="n">Importer</span>
 <span class="kn">from</span> <span class="nn">datumaro.components.media</span> <span class="kn">import</span> <span class="n">Image</span>
 <span class="kn">from</span> <span class="nn">datumaro.util.meta_file_util</span> <span class="kn">import</span> <span class="n">has_meta_file</span><span class="p">,</span> <span class="n">parse_meta_file</span>
 
 
-<div class="viewcode-block" id="MnistPath"><a class="viewcode-back" href="../../../../docs/reference/plugins/data_formats/datumaro.plugins.data_formats.mnist.html#datumaro.plugins.data_formats.mnist.MnistPath">[docs]</a><span class="k">class</span> <span class="nc">MnistPath</span><span class="p">:</span>
+<div class="viewcode-block" id="MnistPath"><a class="viewcode-back" href="../../../../docs/reference/_autosummary/datumaro.plugins.data_formats.mnist.html#datumaro.plugins.data_formats.mnist.MnistPath">[docs]</a><span class="k">class</span> <span class="nc">MnistPath</span><span class="p">:</span>
     <span class="n">TEST_LABELS_FILE</span> <span class="o">=</span> <span class="s2">&quot;t10k-labels-idx1-ubyte.gz&quot;</span>
     <span class="n">TEST_IMAGES_FILE</span> <span class="o">=</span> <span class="s2">&quot;t10k-images-idx3-ubyte.gz&quot;</span>
     <span class="n">LABELS_FILE</span> <span class="o">=</span> <span class="s2">&quot;-labels-idx1-ubyte.gz&quot;</span>
@@ -305,10 +307,17 @@
     <span class="n">NONE_LABEL</span> <span class="o">=</span> <span class="mi">255</span></div>
 
 
-<div class="viewcode-block" id="MnistBase"><a class="viewcode-back" href="../../../../docs/reference/plugins/data_formats/datumaro.plugins.data_formats.mnist.html#datumaro.plugins.data_formats.mnist.MnistBase">[docs]</a><span class="k">class</span> <span class="nc">MnistBase</span><span class="p">(</span><span class="n">SubsetBase</span><span class="p">):</span>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">subset</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="MnistBase"><a class="viewcode-back" href="../../../../docs/reference/_autosummary/datumaro.plugins.data_formats.mnist.html#datumaro.plugins.data_formats.mnist.MnistBase">[docs]</a><span class="k">class</span> <span class="nc">MnistBase</span><span class="p">(</span><span class="n">SubsetBase</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">subset</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">ctx</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ImportContext</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">osp</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="s2">&quot;Can&#39;t read annotation file &#39;</span><span class="si">%s</span><span class="s2">&#39;&quot;</span> <span class="o">%</span> <span class="n">path</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="n">errno</span><span class="o">.</span><span class="n">ENOENT</span><span class="p">,</span> <span class="s2">&quot;Can&#39;t find annotations file&quot;</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dataset_dir</span> <span class="o">=</span> <span class="n">osp</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="n">subset</span><span class="p">:</span>
             <span class="n">file_name</span> <span class="o">=</span> <span class="n">osp</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">osp</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">path</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
@@ -317,11 +326,9 @@
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">subset</span> <span class="o">=</span> <span class="n">file_name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="p">,</span> <span class="n">maxsplit</span><span class="o">=</span><span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
 
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="n">subset</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_dataset_dir</span> <span class="o">=</span> <span class="n">osp</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="n">subset</span><span class="p">,</span> <span class="n">ctx</span><span class="o">=</span><span class="n">ctx</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_categories</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_categories</span><span class="p">()</span>
-
         <span class="bp">self</span><span class="o">.</span><span class="n">_items</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_load_items</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
 
     <span class="k">def</span> <span class="nf">_load_categories</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -397,8 +404,8 @@
         <span class="k">return</span> <span class="n">items</span></div>
 
 
-<div class="viewcode-block" id="MnistImporter"><a class="viewcode-back" href="../../../../docs/reference/plugins/data_formats/datumaro.plugins.data_formats.mnist.html#datumaro.plugins.data_formats.mnist.MnistImporter">[docs]</a><span class="k">class</span> <span class="nc">MnistImporter</span><span class="p">(</span><span class="n">Importer</span><span class="p">):</span>
-<div class="viewcode-block" id="MnistImporter.find_sources"><a class="viewcode-back" href="../../../../docs/reference/plugins/data_formats/datumaro.plugins.data_formats.mnist.html#datumaro.plugins.data_formats.mnist.MnistImporter.find_sources">[docs]</a>    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="MnistImporter"><a class="viewcode-back" href="../../../../docs/reference/_autosummary/datumaro.plugins.data_formats.mnist.html#datumaro.plugins.data_formats.mnist.MnistImporter">[docs]</a><span class="k">class</span> <span class="nc">MnistImporter</span><span class="p">(</span><span class="n">Importer</span><span class="p">):</span>
+<div class="viewcode-block" id="MnistImporter.find_sources"><a class="viewcode-back" href="../../../../docs/reference/_autosummary/datumaro.plugins.data_formats.mnist.html#datumaro.plugins.data_formats.mnist.MnistImporter.find_sources">[docs]</a>    <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">find_sources</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_find_sources_recursive</span><span class="p">(</span>
             <span class="n">path</span><span class="p">,</span>
@@ -409,10 +416,10 @@
         <span class="p">)</span></div></div>
 
 
-<div class="viewcode-block" id="MnistExporter"><a class="viewcode-back" href="../../../../docs/reference/plugins/data_formats/datumaro.plugins.data_formats.mnist.html#datumaro.plugins.data_formats.mnist.MnistExporter">[docs]</a><span class="k">class</span> <span class="nc">MnistExporter</span><span class="p">(</span><span class="n">Exporter</span><span class="p">):</span>
+<div class="viewcode-block" id="MnistExporter"><a class="viewcode-back" href="../../../../docs/reference/_autosummary/datumaro.plugins.data_formats.mnist.html#datumaro.plugins.data_formats.mnist.MnistExporter">[docs]</a><span class="k">class</span> <span class="nc">MnistExporter</span><span class="p">(</span><span class="n">Exporter</span><span class="p">):</span>
     <span class="n">DEFAULT_IMAGE_EXT</span> <span class="o">=</span> <span class="s2">&quot;.png&quot;</span>
 
-<div class="viewcode-block" id="MnistExporter.apply"><a class="viewcode-back" href="../../../../docs/reference/plugins/data_formats/datumaro.plugins.data_formats.mnist.html#datumaro.plugins.data_formats.mnist.MnistExporter.apply">[docs]</a>    <span class="k">def</span> <span class="nf">apply</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_apply_impl</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extractor</span><span class="o">.</span><span class="n">media_type</span><span class="p">()</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">issubclass</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_extractor</span><span class="o">.</span><span class="n">media_type</span><span class="p">(),</span> <span class="n">Image</span><span class="p">):</span>
             <span class="k">raise</span> <span class="n">MediaTypeError</span><span class="p">(</span><span class="s2">&quot;Media type is not an image&quot;</span><span class="p">)</span>
 
@@ -487,16 +494,16 @@
                 <span class="k">with</span> <span class="n">gzip</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">metafile</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
                     <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">meta</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;&lt;U32&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">tobytes</span><span class="p">())</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">save_labels</span><span class="p">()</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">save_labels</span><span class="p">()</span>
 
-<div class="viewcode-block" id="MnistExporter.save_annotations"><a class="viewcode-back" href="../../../../docs/reference/plugins/data_formats/datumaro.plugins.data_formats.mnist.html#datumaro.plugins.data_formats.mnist.MnistExporter.save_annotations">[docs]</a>    <span class="k">def</span> <span class="nf">save_annotations</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+<div class="viewcode-block" id="MnistExporter.save_annotations"><a class="viewcode-back" href="../../../../docs/reference/_autosummary/datumaro.plugins.data_formats.mnist.html#datumaro.plugins.data_formats.mnist.MnistExporter.save_annotations">[docs]</a>    <span class="k">def</span> <span class="nf">save_annotations</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
         <span class="k">with</span> <span class="n">gzip</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
             <span class="c1"># magic number = 0x0801 (2049, hexadecimal representation)</span>
             <span class="c1"># this is used to verify the file with MNIST mark data</span>
             <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mh">0x0801</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)],</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;&gt;i4&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">tobytes</span><span class="p">())</span>
             <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;uint8&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">tobytes</span><span class="p">())</span></div>
 
-<div class="viewcode-block" id="MnistExporter.save_images"><a class="viewcode-back" href="../../../../docs/reference/plugins/data_formats/datumaro.plugins.data_formats.mnist.html#datumaro.plugins.data_formats.mnist.MnistExporter.save_images">[docs]</a>    <span class="k">def</span> <span class="nf">save_images</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+<div class="viewcode-block" id="MnistExporter.save_images"><a class="viewcode-back" href="../../../../docs/reference/_autosummary/datumaro.plugins.data_formats.mnist.html#datumaro.plugins.data_formats.mnist.MnistExporter.save_images">[docs]</a>    <span class="k">def</span> <span class="nf">save_images</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
         <span class="k">with</span> <span class="n">gzip</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
             <span class="c1"># magic number = 0x0803 (2051, hexadecimal representation),</span>
             <span class="c1"># this is used to verify the file with MNIST image data</span>
@@ -507,7 +514,7 @@
             <span class="p">)</span>
             <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;uint8&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">tobytes</span><span class="p">())</span></div>
 
-<div class="viewcode-block" id="MnistExporter.save_labels"><a class="viewcode-back" href="../../../../docs/reference/plugins/data_formats/datumaro.plugins.data_formats.mnist.html#datumaro.plugins.data_formats.mnist.MnistExporter.save_labels">[docs]</a>    <span class="k">def</span> <span class="nf">save_labels</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="MnistExporter.save_labels"><a class="viewcode-back" href="../../../../docs/reference/_autosummary/datumaro.plugins.data_formats.mnist.html#datumaro.plugins.data_formats.mnist.MnistExporter.save_labels">[docs]</a>    <span class="k">def</span> <span class="nf">save_labels</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">labels_file</span> <span class="o">=</span> <span class="n">osp</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_save_dir</span><span class="p">,</span> <span class="s2">&quot;labels.txt&quot;</span><span class="p">)</span>
         <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">labels_file</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
             <span class="n">f</span><span class="o">.</span><span class="n">writelines</span><span class="p">(</span>
